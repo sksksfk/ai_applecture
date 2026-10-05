@@ -24,6 +24,10 @@ th{background:#eef4ff;padding:12px;border-top:1px solid var(--line);border-botto
 .preview{border:2px dashed #cbd5e3;border-radius:10px;background:#fff;display:grid;place-items:center;overflow:hidden;min-height:150px}.preview[data-ratio="1:1"]{aspect-ratio:1/1}.preview[data-ratio="4:5"]{aspect-ratio:4/5}.preview[data-ratio="16:9"]{aspect-ratio:16/9}.preview[data-ratio="9:16"]{aspect-ratio:9/16}.preview img,.preview video{width:100%;height:100%;object-fit:contain}.filelabel{cursor:pointer;text-align:center;color:#65748a;padding:12px}.filelabel input{display:none}.copy-media{margin-top:7px;width:100%}
 .reference-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.footer{margin:20px 0 8px;background:#214b86;color:#fff;padding:24px;border-radius:18px;text-align:center;font-size:20px;line-height:1.65}
 .toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}
+
+.ref-title{width:100%;padding:8px;border:1px solid #d6deea;border-radius:8px;font-weight:700;background:#fff}
+.ref-actions{display:flex;gap:6px;margin-top:7px}
+.ref-actions .btn{flex:1}
 @media(max-width:900px){.meta{grid-template-columns:1fr 1fr}.timergrid{grid-template-columns:1fr}.reference-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.meta{grid-template-columns:1fr}.reference-grid{grid-template-columns:1fr}.wrap{padding:10px}}
 </style>
 </head>
@@ -63,7 +67,16 @@ th{background:#eef4ff;padding:12px;border-top:1px solid var(--line);border-botto
 <div class="copyrow"><span class="charcount"></span><button class="btn ghost" onclick="copyPrompt(this)">📋 프롬프트 복사</button></div></td><td><div id="right3" class="media-stack"></div></td></tr>
 </tbody></table></div></section>
 
-<section class="panel"><h2 style="margin-top:0">참조 이미지 보관함</h2><div class="legend" style="margin-bottom:10px">강의 때 자주 보여줄 이미지 4개를 넣어두고, 비율을 바꾸거나 복사해서 카카오톡 등으로 공유할 수 있습니다.</div><div id="refGrid" class="reference-grid"></div></section>
+<section class="panel">
+<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+  <div>
+    <h2 style="margin:0">참조 이미지 보관함</h2>
+    <div class="legend" style="margin-top:5px">이미지는 이 브라우저에 자동 저장됩니다. 새로고침 후에도 유지되며, 제목·비율 수정과 추가·삭제가 가능합니다.</div>
+  </div>
+  <button class="btn add" onclick="addReferenceCard()">＋ 참조 이미지 추가</button>
+</div>
+<div id="refGrid" class="reference-grid" style="margin-top:12px"></div>
+</section>
 
 <div class="footer">수고 많으셨습니다.<br>다들 유용한 작품들 만들어서 활용하시기 바랍니다.</div></div><div id="toast" class="toast"></div>
 <script>
@@ -80,7 +93,152 @@ async function copyOutput(btn){const ta=btn.closest('td').querySelector('.output
 function makeMediaCard(title,accept='image/*'){const box=document.createElement('div');box.className='media-card';box.innerHTML=`<div class="media-title"><strong>${title}</strong></div><div class="ratio-wrap"><select onchange="setRatio(this)"><option>1:1</option><option>4:5</option><option>16:9</option><option>9:16</option></select></div><div class="preview" data-ratio="1:1"><label class="filelabel">📷 파일 넣기<input type="file" accept="${accept}"></label></div><button class="btn ghost copy-media" onclick="copyMedia(this)">📋 이미지 복사</button>`;const input=box.querySelector('input'),p=box.querySelector('.preview');input.addEventListener('change',()=>{const f=input.files[0];if(!f)return;const url=URL.createObjectURL(f);p.innerHTML='';if(f.type.startsWith('video/')){const v=document.createElement('video');v.src=url;v.controls=true;p.appendChild(v)}else{const img=document.createElement('img');img.src=url;p.appendChild(img)}});return box}
 function setRatio(s){s.closest('.media-card').querySelector('.preview').dataset.ratio=s.value}
 async function copyMedia(btn){const p=btn.closest('.media-card').querySelector('.preview'),img=p.querySelector('img');if(!img){toast('복사할 이미지가 없습니다.');return}try{const ratios={'1:1':[1,1],'4:5':[4,5],'16:9':[16,9],'9:16':[9,16]},r=ratios[p.dataset.ratio]||[1,1],c=document.createElement('canvas');c.width=800;c.height=Math.round(800*r[1]/r[0]);const x=c.getContext('2d');x.fillStyle='white';x.fillRect(0,0,c.width,c.height);const s=Math.min(c.width/img.naturalWidth,c.height/img.naturalHeight),w=img.naturalWidth*s,h=img.naturalHeight*s;x.drawImage(img,(c.width-w)/2,(c.height-h)/2,w,h);const b=await new Promise(ok=>c.toBlob(ok,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);toast('이미지를 복사했습니다.')}catch(e){toast('브라우저 정책상 이미지 직접 복사가 제한될 수 있습니다.')}}
-left2.appendChild(makeMediaCard('변환할 사진'));right2.appendChild(makeMediaCard('생성된 이미지/영상','image/*,video/*'));left3a.appendChild(makeMediaCard('이미지 1 · 변환할 사진'));left3b.appendChild(makeMediaCard('이미지 2 · 참조 화풍'));right3.appendChild(makeMediaCard('생성된 이미지'));for(let i=1;i<=4;i++)refGrid.appendChild(makeMediaCard(`참조 이미지 ${i}`));
+left2.appendChild(makeMediaCard('변환할 사진'));
+right2.appendChild(makeMediaCard('생성된 이미지/영상','image/*,video/*'));
+left3a.appendChild(makeMediaCard('이미지 1 · 변환할 사진'));
+left3b.appendChild(makeMediaCard('이미지 2 · 참조 화풍'));
+right3.appendChild(makeMediaCard('생성된 이미지'));
+
+const REF_DB='lectureReferenceDB';
+const REF_STORE='references';
+
+function openRefDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(REF_DB,1);
+    req.onupgradeneeded=()=> {
+      const db=req.result;
+      if(!db.objectStoreNames.contains(REF_STORE)){
+        db.createObjectStore(REF_STORE,{keyPath:'id',autoIncrement:true});
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function getAllRefs(){
+  const db=await openRefDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(REF_STORE,'readonly');
+    const req=tx.objectStore(REF_STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function putRef(data){
+  const db=await openRefDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(REF_STORE,'readwrite');
+    const req=tx.objectStore(REF_STORE).put(data);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function addRef(data){
+  const db=await openRefDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(REF_STORE,'readwrite');
+    const req=tx.objectStore(REF_STORE).add(data);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function deleteRef(id){
+  const db=await openRefDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(REF_STORE,'readwrite');
+    const req=tx.objectStore(REF_STORE).delete(id);
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error);
+  });
+}
+function blobToURL(blob){return blob?URL.createObjectURL(blob):''}
+
+function buildReferenceCard(item){
+  const box=document.createElement('div');
+  box.className='media-card';
+  box.dataset.id=item.id;
+  box.innerHTML=`
+    <input class="ref-title" value="${(item.title||'참조 이미지').replace(/"/g,'&quot;')}" onchange="updateRefTitle(this)">
+    <div class="ratio-wrap" style="margin-top:7px">
+      <select onchange="updateRefRatio(this)">
+        <option ${item.ratio==='1:1'?'selected':''}>1:1</option>
+        <option ${item.ratio==='4:5'?'selected':''}>4:5</option>
+        <option ${item.ratio==='16:9'?'selected':''}>16:9</option>
+        <option ${item.ratio==='9:16'?'selected':''}>9:16</option>
+      </select>
+    </div>
+    <div class="preview" data-ratio="${item.ratio||'1:1'}"></div>
+    <div class="ref-actions">
+      <label class="btn ghost" style="text-align:center;cursor:pointer">이미지 변경<input type="file" accept="image/*" style="display:none"></label>
+      <button class="btn ghost" onclick="copyMedia(this)">📋 복사</button>
+      <button class="btn danger" onclick="removeReferenceCard(this)">삭제</button>
+    </div>`;
+  const prev=box.querySelector('.preview');
+  if(item.blob){
+    const img=document.createElement('img');
+    img.src=blobToURL(item.blob);
+    prev.appendChild(img);
+  }else{
+    prev.innerHTML='<span class="filelabel">이미지를 넣어주세요</span>';
+  }
+  const input=box.querySelector('input[type=file]');
+  input.addEventListener('change',async()=>{
+    const f=input.files[0]; if(!f)return;
+    item.blob=f;
+    await putRef(item);
+    const img=document.createElement('img');
+    img.src=blobToURL(f);
+    prev.innerHTML='';
+    prev.appendChild(img);
+    toast('참조 이미지를 저장했습니다.');
+  });
+  return box;
+}
+
+async function renderReferenceCards(){
+  const grid=document.getElementById('refGrid');
+  grid.innerHTML='';
+  let refs=await getAllRefs();
+  if(refs.length===0){
+    for(let i=1;i<=4;i++){
+      await addRef({title:`참조 이미지 ${i}`,ratio:'1:1',blob:null});
+    }
+    refs=await getAllRefs();
+  }
+  refs.sort((a,b)=>a.id-b.id).forEach(x=>grid.appendChild(buildReferenceCard(x)));
+}
+async function addReferenceCard(){
+  const id=await addRef({title:'새 참조 이미지',ratio:'1:1',blob:null});
+  renderReferenceCards();
+  toast('참조 이미지 칸을 추가했습니다.');
+}
+async function removeReferenceCard(btn){
+  const card=btn.closest('.media-card');
+  if(!confirm('이 참조 이미지를 삭제하시겠습니까?')) return;
+  await deleteRef(Number(card.dataset.id));
+  card.remove();
+  toast('삭제했습니다.');
+}
+async function updateRefTitle(input){
+  const card=input.closest('.media-card');
+  const refs=await getAllRefs();
+  const item=refs.find(x=>x.id===Number(card.dataset.id));
+  if(!item)return;
+  item.title=input.value;
+  await putRef(item);
+  toast('제목을 저장했습니다.');
+}
+async function updateRefRatio(sel){
+  const card=sel.closest('.media-card');
+  const refs=await getAllRefs();
+  const item=refs.find(x=>x.id===Number(card.dataset.id));
+  if(!item)return;
+  item.ratio=sel.value;
+  card.querySelector('.preview').dataset.ratio=sel.value;
+  await putRef(item);
+  toast('비율을 저장했습니다.');
+}
+renderReferenceCards();
 function togglePrepare(){prepareBox.classList.toggle('open')}function renderPrepare(){let a;try{a=JSON.parse(localStorage.getItem('prepareItemsV3')||'["스마트폰 또는 노트북","ChatGPT 또는 생성형 AI 계정"]')}catch(e){a=[]}prepareList.innerHTML='';a.slice(0,5).forEach((v,i)=>{const d=document.createElement('div');d.className='prepare-item';d.innerHTML=`<input value="${v.replace(/"/g,'&quot;')}" oninput="savePrepare()"><button class="btn danger" onclick="removePrepare(${i})">삭제</button>`;prepareList.appendChild(d)})}
 function savePrepare(){localStorage.setItem('prepareItemsV3',JSON.stringify([...prepareList.querySelectorAll('input')].map(x=>x.value)))}function addPrepare(){const a=[...prepareList.querySelectorAll('input')].map(x=>x.value);if(a.length>=5){toast('준비물은 최대 5개까지 가능합니다.');return}a.push('');localStorage.setItem('prepareItemsV3',JSON.stringify(a));renderPrepare()}function removePrepare(i){const a=[...prepareList.querySelectorAll('input')].map(x=>x.value);a.splice(i,1);localStorage.setItem('prepareItemsV3',JSON.stringify(a));renderPrepare()}renderPrepare();
 let timer=null,endTime=null,startedAt=null,pausedRemaining=null,fired={m5:false,b10:false,b5:false};
